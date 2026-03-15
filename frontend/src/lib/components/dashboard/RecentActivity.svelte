@@ -1,16 +1,17 @@
 <!--
 Recent Activity Feed Component
 
-Displays the last 5 items grabbed or imported across all services.
-Shows appropriate icons based on service type (Movies for Radarr, TV for Sonarr, etc.).
+Displays real activity data from the backend API (last 5 items across all services).
+Shows appropriate icons based on activity type and service.
 -->
 
 <script>
-	/**
-	 * Array of recent activities
-	 * @type {Array<{ id: string, type: 'movie' | 'tv' | 'music' | 'search', title: string, service: string, timestamp: Date }>}
-	 */
-	export let activities = [];
+	import { onMount } from 'svelte';
+	import {
+		activityStore,
+		recentActivities,
+		refreshActivity
+	} from '$lib/stores/activityStore.js';
 
 	/**
 	 * Get icon for activity type
@@ -47,21 +48,67 @@ Shows appropriate icons based on service type (Movies for Radarr, TV for Sonarr,
 	function getServiceLabel(service) {
 		return (service || 'Unknown').charAt(0).toUpperCase() + service.slice(1);
 	}
+
+	/**
+	 * Handle manual refresh
+	 */
+	async function handleRefresh() {
+		await refreshActivity();
+	}
+
+	onMount(() => {
+		// Initial refresh on component mount
+		refreshActivity();
+	});
 </script>
 
 <div class="bg-gray-800 border border-gray-700 rounded-lg p-6 shadow-md">
 	<div class="flex items-center justify-between mb-4">
 		<h2 class="text-lg font-semibold text-white">Recent Activity</h2>
-		<span class="text-xs text-gray-400">Last 5</span>
+		<div class="flex items-center gap-2">
+			<span class="text-xs text-gray-400">Last 5</span>
+			<button
+				on:click={handleRefresh}
+				class="text-xs text-gray-500 hover:text-white transition-colors"
+				title="Refresh activity"
+			>
+				🔄
+			</button>
+		</div>
 	</div>
 
-	{#if activities.length === 0}
+	<!-- Error state -->
+	{#if $activityStore.error}
 		<div class="text-center py-8">
-			<p class="text-gray-500">No recent activity</p>
+			<p class="text-red-500 text-sm">Failed to load activity: {$activityStore.error}</p>
+			<button
+				on:click={handleRefresh}
+				class="mt-2 text-xs text-gray-500 hover:text-white"
+			>
+				Retry
+			</button>
 		</div>
+
+	<!-- Loading state -->
+	{:else if $activityStore.isLoading}
+		<div class="text-center py-8">
+			<div class="inline-block animate-spin text-xl mb-2">🔄</div>
+			<p class="text-gray-500">Loading activity...</p>
+		</div>
+
+	<!-- Empty state -->
+	{:else if $recentActivities.length === 0}
+		<div class="text-center py-8">
+			<p class="text-gray-500">No recent activity found</p>
+			<p class="text-xs text-gray-600 mt-1">
+				Activity from the last 24 hours will appear here
+			</p>
+		</div>
+
+	<!-- Activity list -->
 	{:else}
 		<div class="space-y-3">
-			{#each activities.slice(0, 5) as activity (activity.id)}
+			{#each $recentActivities as activity (activity.id)}
 				<div class="flex items-start gap-3 pb-3 border-b border-gray-700 last:border-b-0">
 					<span class="text-xl flex-shrink-0">{getActivityIcon(activity.type)}</span>
 					<div class="flex-1 min-w-0">
