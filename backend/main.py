@@ -14,6 +14,7 @@ from fastapi.responses import JSONResponse
 from backend.config import settings
 from backend.routes import proxy_router
 from backend.routes import search_router
+from backend.routes import activity_router
 
 from dotenv import load_dotenv
 
@@ -67,6 +68,7 @@ logger.info(f"CORS enabled for origins: {settings.allowed_origins}")
 
 app.include_router(proxy_router)
 app.include_router(search_router)
+app.include_router(activity_router)
 
 # ============================================================================
 # Health Check Endpoint
